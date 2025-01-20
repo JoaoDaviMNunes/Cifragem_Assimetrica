@@ -31,7 +31,7 @@ def servidor():
     print("Chave Pública do Servidor (RSA):", chave_publica)
 
     # Parâmetros da troca Diffie-Hellman
-    primo = 999983  # Número primo de 6 dígitos usado no cálculo
+    primo = 23  # Número primo de 6 dígitos usado no cálculo
     gerador = 5  # Gerador usado no cálculo
     chave_privada_servidor = random.randint(1, primo - 1)  # Chave privada do servidor
     chave_publica_servidor = troca_chave_diffie_hellman(primo, gerador, chave_privada_servidor)

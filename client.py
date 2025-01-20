@@ -15,7 +15,7 @@ def troca_chave_diffie_hellman(primo, gerador, chave_privada):
 # Código do cliente
 def cliente():
     # Parâmetros da troca Diffie-Hellman
-    primo = 999983  # Número primo de 6 dígitos usado no cálculo
+    primo = 23  # Número primo de 6 dígitos usado no cálculo
     gerador = 5  # Gerador usado no cálculo
     chave_privada_cliente = random.randint(1, primo - 1)  # Chave privada do cliente
     chave_publica_cliente = troca_chave_diffie_hellman(primo, gerador, chave_privada_cliente)
