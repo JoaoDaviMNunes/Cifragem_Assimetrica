@@ -1,69 +1,76 @@
-import random
-from math import gcd
+# === server.py ===
+import socket  # Biblioteca para comunicação de rede
+import random  # Biblioteca para geração de números aleatórios
+from math import gcd  # Função para calcular o máximo divisor comum
 
-# === Diffie-Hellman Key Exchange ===
-def diffie_hellman():
-    # Simplifications: Small prime and generator for clarity
-    p = 23  # Prime number (simplified for understanding)
-    g = 5   # Generator (simplified for understanding)
+# Função para gerar as chaves RSA
+def gerar_chaves_rsa():
+    p = 61  # Primeiro número primo
+    q = 53  # Segundo número primo
+    n = p * q  # Produto dos primos, usado como módulo
+    phi = (p - 1) * (q - 1)  # Totiente de Euler
+    e = 17  # Expoente público, escolhido coprimo com phi
+    d = pow(e, -1, phi)  # Expoente privado, inverso modular de e
+    return (e, n), (d, n)  # Retorna chave pública (e, n) e privada (d, n)
 
-    # Private keys (secret)
-    a = int(input('DH Private Key A: '))
-    b = int(input('DH Private Key B: '))
+# Função para decifrar uma mensagem RSA
+def decifrar_rsa(mensagem_cifrada, chave_privada):
+    d, n = chave_privada  # Extrai chave privada
+    # Decifra cada elemento da mensagem cifrada e converte para caractere
+    return ''.join([chr(pow(caractere, d, n)) for caractere in mensagem_cifrada])
 
-    # Public keys
-    A = (g ** a) % p  # User A's public key
-    B = (g ** b) % p  # User B's public key
+# Função para calcular a troca de chaves Diffie-Hellman
+def troca_chave_diffie_hellman(primo, gerador, chave_privada):
+    # pow (base, exp, mod)
+    return pow(gerador, chave_privada, primo)  # Calcula a chave pública
 
-    # Shared secret
-    shared_secret_A = (B ** a) % p  # Calculated by User A
-    shared_secret_B = (A ** b) % p  # Calculated by User B
+# Código do servidor
+def servidor():
+    # Gera as chaves RSA do servidor
+    chave_publica, chave_privada = gerar_chaves_rsa()
+    print("Chave Pública do Servidor (RSA):", chave_publica)
 
-    assert shared_secret_A == shared_secret_B
-    print("Diffie-Hellman Key Exchange")
-    print(f"Prime (p): {p}, Generator (g): {g}")
-    print(f"User A Private/Public: ({a}, {A})")
-    print(f"User B Private/Public: ({b}, {B})")
-    print(f"Shared Secret: {shared_secret_A}\n")
+    # Parâmetros da troca Diffie-Hellman
+    primo = 999983  # Número primo de 6 dígitos usado no cálculo
+    gerador = 5  # Gerador usado no cálculo
+    chave_privada_servidor = random.randint(1, primo - 1)  # Chave privada do servidor
+    chave_publica_servidor = troca_chave_diffie_hellman(primo, gerador, chave_privada_servidor)
+    print("Chave Pública do Servidor (Diffie-Hellman):", chave_publica_servidor)
 
-# === RSA Encryption ===
-def generate_rsa_keys():
-    # Simplifications: Small prime numbers
-    p = 61  # Prime 1 (simplified for understanding)
-    q = 53  # Prime 2 (simplified for understanding)
-    n = p * q  # Modulus
-    phi = (p - 1) * (q - 1)  # Euler's Totient
+    # Configuração do socket para comunicação
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("localhost", 12345))  # Vincula o servidor ao endereço e porta
+        s.listen(1)  # Aguarda conexões
+        print("Aguardando conexão de um cliente...")
+        conn, addr = s.accept()  # Aceita a conexão do cliente
+        with conn:
+            print("Conexão estabelecida com", addr)  # Informa o endereço do cliente
 
-    # Public key generation (e)
-    e = 17  # Small prime coprime to phi, commonly used value
+            # Envia a chave pública RSA para o cliente
+            conn.sendall(str(chave_publica).encode())
 
-    # Private key generation (d)
-    d = pow(e, -1, phi)  # Modular multiplicative inverse
+            # Recebe a chave pública Diffie-Hellman e a mensagem cifrada do cliente
+            dados_recebidos = conn.recv(1024).decode()  # Decodifica os dados recebidos do cliente
 
-    return (e, n), (d, n)  # Public and private keys
+            # Divide os dados recebidos em chave pública e mensagem cifrada
+            partes = dados_recebidos.split('|')  # Separador customizado para distinguir as partes
+            chave_publica_cliente = int(partes[0])  # Converte a primeira parte na chave pública do cliente
+            mensagem_cifrada = eval(partes[1])  # Avalia a segunda parte como uma lista
 
-def rsa_encrypt(message, public_key):
-    e, n = public_key
-    return [pow(ord(char), e, n) for char in message]
+            print("Chave Pública do Cliente (Diffie-Hellman):", chave_publica_cliente)
 
-def rsa_decrypt(ciphertext, private_key):
-    d, n = private_key
-    return ''.join([chr(pow(char, d, n)) for char in ciphertext])
+            # Calcula o segredo compartilhado usando Diffie-Hellman
+            segredo_compartilhado = pow(chave_publica_cliente, chave_privada_servidor, primo)
+            print("Segredo Compartilhado:", segredo_compartilhado)
 
-def rsa_demo():
-    public_key, private_key = generate_rsa_keys()
-    message = "Hello"
+            # Decifra a mensagem usando RSA
+            mensagem_decifrada = decifrar_rsa(mensagem_cifrada, chave_privada)
+            print("Mensagem Decifrada:", mensagem_decifrada)
 
-    ciphertext = rsa_encrypt(message, public_key)
-    decrypted_message = rsa_decrypt(ciphertext, private_key)
+            # Exibe todas as informações
+            print("Chave Pública do Servidor (RSA):", chave_publica)
+            print("Chave Pública do Cliente (Diffie-Hellman):", chave_publica_cliente)
+            print("Mensagem Recebida:", mensagem_decifrada)
 
-    print("RSA Encryption")
-    print(f"Public Key: {public_key}")
-    print(f"Private Key: {private_key}")
-    print(f"Message: {message}")
-    print(f"Ciphertext: {ciphertext}")
-    print(f"Decrypted: {decrypted_message}")
-
-# Run implementations
-diffie_hellman()
-rsa_demo()
+if __name__ == "__main__":
+    servidor()
