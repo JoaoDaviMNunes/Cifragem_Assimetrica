@@ -1,67 +1,69 @@
-# Importa as bibliotecas necessárias
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.Util import number
 import random
-import sys
+from math import gcd
 
-# Função para gerar números primos (simplificação para primos pequenos)
-def gerar_primo(tamanho=512):
-    return number.getPrime(tamanho)
-
-# Geração de chaves RSA
-def gerar_chaves_RSA(tamanho=2048):
-    print("Gerando chaves RSA...")
-    chave = RSA.generate(tamanho)
-    chave_privada = chave.export_key()
-    chave_publica = chave.publickey().export_key()
-    return chave_privada, chave_publica
-
-# Criptografia e descriptografia RSA
-def criptografar_RSA(mensagem, chave_publica):
-    chave_pub = RSA.import_key(chave_publica)
-    cifra = PKCS1_OAEP.new(chave_pub)
-    mensagem_cifrada = cifra.encrypt(mensagem.encode())
-    return mensagem_cifrada
-
-def descriptografar_RSA(mensagem_cifrada, chave_privada):
-    chave_priv = RSA.import_key(chave_privada)
-    cifra = PKCS1_OAEP.new(chave_priv)
-    mensagem = cifra.decrypt(mensagem_cifrada)
-    return mensagem.decode()
-
-# Troca de chaves Diffie-Hellman
+# === Diffie-Hellman Key Exchange ===
 def diffie_hellman():
-    print("Realizando a troca de chaves Diffie-Hellman...")
-    # Simplificação: primos pequenos e gerador fixo
-    p = gerar_primo(512)
-    g = random.randint(2, p-1)
-    a = random.randint(1, p-1)
-    A = pow(g, a, p)
-    return p, g, a, A
+    # Simplifications: Small prime and generator for clarity
+    p = 23  # Prime number (simplified for understanding)
+    g = 5   # Generator (simplified for understanding)
 
-def calcular_chave_compartilhada(p, g, A, b):
-    B = pow(g, b, p)
-    chave_compartilhada = pow(A, b, p)
-    return chave_compartilhada
+    # Private keys (secret)
+    a = int(input('DH Private Key A: '))
+    b = int(input('DH Private Key B: '))
 
-# Função principal
-if __name__ == "__main__":
-    # Geração das chaves RSA
-    chave_privada, chave_publica = gerar_chaves_RSA()
-    print("Chave Pública RSA:\n", chave_publica.decode())
-    print("Chave Privada RSA:\n", chave_privada.decode())
-    
-    # Exemplo de criptografia e descriptografia RSA
-    mensagem = "Mensagem secreta"
-    print("Mensagem original:", mensagem)
-    mensagem_cifrada = criptografar_RSA(mensagem, chave_publica)
-    print("Mensagem cifrada RSA:", mensagem_cifrada)
-    mensagem_decifrada = descriptografar_RSA(mensagem_cifrada, chave_privada)
-    print("Mensagem decifrada RSA:", mensagem_decifrada)
-    
-    # Exemplo de troca de chaves Diffie-Hellman
-    p, g, a, A = diffie_hellman()
-    b = random.randint(1, p-1)
-    chave_compartilhada = calcular_chave_compartilhada(p, g, A, b)
-    print("Chave Compartilhada (Diffie-Hellman):", chave_compartilhada)
+    # Public keys
+    A = (g ** a) % p  # User A's public key
+    B = (g ** b) % p  # User B's public key
+
+    # Shared secret
+    shared_secret_A = (B ** a) % p  # Calculated by User A
+    shared_secret_B = (A ** b) % p  # Calculated by User B
+
+    assert shared_secret_A == shared_secret_B
+    print("Diffie-Hellman Key Exchange")
+    print(f"Prime (p): {p}, Generator (g): {g}")
+    print(f"User A Private/Public: ({a}, {A})")
+    print(f"User B Private/Public: ({b}, {B})")
+    print(f"Shared Secret: {shared_secret_A}\n")
+
+# === RSA Encryption ===
+def generate_rsa_keys():
+    # Simplifications: Small prime numbers
+    p = 61  # Prime 1 (simplified for understanding)
+    q = 53  # Prime 2 (simplified for understanding)
+    n = p * q  # Modulus
+    phi = (p - 1) * (q - 1)  # Euler's Totient
+
+    # Public key generation (e)
+    e = 17  # Small prime coprime to phi, commonly used value
+
+    # Private key generation (d)
+    d = pow(e, -1, phi)  # Modular multiplicative inverse
+
+    return (e, n), (d, n)  # Public and private keys
+
+def rsa_encrypt(message, public_key):
+    e, n = public_key
+    return [pow(ord(char), e, n) for char in message]
+
+def rsa_decrypt(ciphertext, private_key):
+    d, n = private_key
+    return ''.join([chr(pow(char, d, n)) for char in ciphertext])
+
+def rsa_demo():
+    public_key, private_key = generate_rsa_keys()
+    message = "Hello"
+
+    ciphertext = rsa_encrypt(message, public_key)
+    decrypted_message = rsa_decrypt(ciphertext, private_key)
+
+    print("RSA Encryption")
+    print(f"Public Key: {public_key}")
+    print(f"Private Key: {private_key}")
+    print(f"Message: {message}")
+    print(f"Ciphertext: {ciphertext}")
+    print(f"Decrypted: {decrypted_message}")
+
+# Run implementations
+diffie_hellman()
+rsa_demo()
